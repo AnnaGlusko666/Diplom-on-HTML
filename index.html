@@ -1,0 +1,628 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Електронний журнал — MVP</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<header class="public-header" id="publicHeader">
+  <div class="public-brand">
+    <div class="public-title">Електронний журнал</div>
+    <div class="public-subtitle">Система з механізмами мотивації</div>
+  </div>
+</header>
+
+<main class="page">
+
+  <!-- ROLE -->
+  <section class="public-screen" id="screenRole">
+    <h2 class="center-title">Виберіть тип користувача</h2>
+    <p class="center-subtitle">Оберіть, як ви будете використовувати систему</p>
+
+    <div class="role-grid">
+      <div class="role-card">
+        <div class="role-icon green">🎓</div>
+        <h3>Учень</h3>
+        <p class="muted center">Перегляд оцінок, мотивація, магазин, профіль</p>
+
+        <ul class="role-list">
+          <li>Перегляд своїх оцінок</li>
+          <li>Система відзнак</li>
+          <li>Обмін балів на монети</li>
+          <li>Магазин та інвентар</li>
+        </ul>
+
+        <button class="btn btn-green w100" id="btnGoStudent">Увійти як учень</button>
+      </div>
+
+      <div class="role-card selected">
+        <div class="role-icon purple">👩‍🏫</div>
+        <h3>Вчитель</h3>
+        <p class="muted center">Виставлення оцінок, керування розкладом, робота з учнями</p>
+
+        <ul class="role-list">
+          <li>Додавання учнів вручну</li>
+          <li>Учні спільні для всіх вчителів</li>
+          <li>Виставлення оцінок</li>
+          <li>Керування розкладом</li>
+        </ul>
+
+        <button class="btn btn-purple w100" id="btnGoTeacher">Зареєструватися як вчитель</button>
+        <button class="btn btn-ghost w100" id="btnGoTeacherLogin" style="margin-top:10px;">Увійти як вчитель</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- STUDENT LOGIN -->
+  <section class="public-screen hidden" id="screenStudentLogin">
+    <div class="auth-card">
+      <div class="auth-head blue">
+        <h2>Вхід для учня</h2>
+        <p>Увійдіть у свій обліковий запис</p>
+      </div>
+
+      <div class="auth-body">
+        <label>Логін</label>
+        <input id="sLogin" placeholder="Введіть ваш логін" />
+
+        <label>Пароль</label>
+        <input id="sPass" type="password" placeholder="Введіть пароль" />
+
+        <label class="chk">
+          <input type="checkbox" id="toggleStudentPass" />
+          Показати пароль
+        </label>
+
+        <button class="btn btn-green w100 mt14" id="btnStudentLogin">Увійти в систему</button>
+
+        <p class="muted center small" style="margin-top:12px;">
+          Не маєте облікового запису?
+          <a href="#" id="linkOnlyTeacher">Зареєструватися (тільки для вчителя)</a>
+        </p>
+
+        <div class="error hidden" id="sErr"></div>
+
+        <div class="center-actions">
+          <button class="btn btn-ghost" id="btnBackFromStudent">Назад</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TEACHER AUTH -->
+  <section class="public-screen hidden" id="screenTeacherAuth">
+    <div class="auth-card">
+      <div class="auth-head purple">
+        <h2>Реєстрація вчителя</h2>
+        <p>Створіть обліковий запис вчителя</p>
+      </div>
+
+      <div class="auth-body">
+        <label>Ім'я та прізвище</label>
+        <input id="tName" placeholder="Введіть ваше ім'я та прізвище" />
+
+        <label>Предмет</label>
+        <select id="tSubject">
+          <option>Математика</option>
+          <option>Українська мова</option>
+          <option>Інформатика</option>
+          <option>Фізика</option>
+          <option>Історія</option>
+          <option>Англійська мова</option>
+        </select>
+
+        <label>Логін</label>
+        <input id="tLogin" placeholder="Придумайте логін" />
+
+        <label>Пароль</label>
+        <input id="tPass" type="password" placeholder="Придумайте пароль" />
+
+        <label>Повторити пароль</label>
+        <input id="tPassRepeat" type="password" placeholder="Повторіть пароль" />
+
+        <label class="chk">
+          <input type="checkbox" id="toggleTeacherPass" />
+          Показати пароль
+        </label>
+
+        <button class="btn btn-green w100 mt14" id="btnTeacherRegister">Зареєструватися</button>
+
+        <p class="muted center small" style="margin-top:12px;">
+          Вже маєте обліковий запис? <a href="#" id="linkTeacherLogin">Увійти</a>
+        </p>
+
+        <div class="error hidden" id="tErr"></div>
+
+        <div class="center-actions">
+          <button class="btn btn-ghost" id="btnBackFromTeacher">Назад</button>
+        </div>
+      </div>
+    </div>
+  
+  </section>
+
+  <!-- TEACHER LOGIN -->
+  <section class="public-screen hidden" id="screenTeacherLogin">
+    <div class="auth-card">
+      <div class="auth-head purple">
+        <h2>Вхід для вчителя</h2>
+        <p>Увійдіть у свій обліковий запис</p>
+      </div>
+
+      <div class="auth-body">
+        <label>Логін</label>
+        <input id="tLogin2" placeholder="Введіть логін" />
+
+        <label>Пароль</label>
+        <input id="tPass2" type="password" placeholder="Введіть пароль" />
+
+        <label class="chk">
+          <input type="checkbox" id="toggleTeacherLoginPass" />
+          Показати пароль
+        </label>
+
+        <button class="btn btn-purple w100 mt14" id="btnTeacherLogin">Увійти в систему</button>
+
+        <div class="error hidden" id="tErr2"></div>
+
+        <div class="center-actions">
+          <button class="btn btn-ghost" id="btnBackFromTeacherLogin">Назад</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</section>
+
+  <!-- ===== TEACHER APP ===== -->
+  <section class="teacher-app hidden" id="screenTeacherApp">
+    <header class="teacher-topbar">
+      <div class="teacher-top-left">
+        <div class="teacher-logo">👩‍🏫</div>
+        <div>
+          <div class="teacher-app-title">Електронний журнал</div>
+          <div class="teacher-user-line">
+            <span id="topTeacherName">—</span>
+            <span class="badge">Вчитель</span>
+            <span class="badge ghost" id="topTeacherSubject">—</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="teacher-top-right">
+        <button class="btn btn-ghost" id="btnLogoutTeacher">↩ Вийти</button>
+      </div>
+    </header>
+
+    <div class="teacher-layout">
+      <aside class="teacher-sidebar">
+        <button class="nav-item active" data-tpage="panel">👥 Панель вчителя</button>
+        <button class="nav-item" data-tpage="grades">🧾 Оцінки</button>
+        <button class="nav-item" data-tpage="schedule">📅 Розклад</button>
+        <button class="nav-item" data-tpage="profile">👤 Мій профіль</button>
+      </aside>
+
+      <section class="teacher-content">
+        <!-- PANEL -->
+        <div id="tPagePanel">
+          <div class="content-head">
+            <h2>Панель вчителя</h2>
+            <div class="pill orange">👥 <b id="panelStudentsCount">0</b> учні</div>
+          </div>
+
+          <div class="row gap wrap" style="margin-bottom:14px;">
+            <select id="panelClassSelect" class="select"></select>
+            <select id="panelSubjectSelect" class="select"></select>
+          </div>
+
+          <div class="stack">
+            <button class="btn btn-green w100" id="btnOpenAddStudent">👤➕ Додати учня</button>
+            <button class="btn btn-ghost w100" id="btnPullStudents">📋 Витягнути учнів цього класу</button>
+            <button class="btn btn-ghost w100" id="btnExportStudentsXlsx">⬇️ Експорт логінів (Excel)</button>
+          </div>
+
+          <h3 class="block-title" style="margin-top:18px;">Учні класу</h3>
+          <p class="muted" id="studentsEmptyHint">У класі поки немає учнів.</p>
+          <div id="studentsListWrap"></div>
+
+          <!-- ADD STUDENT FORM -->
+          <div class="card hidden" id="addStudentCard" style="margin-top:16px;">
+            <h3>Додати нового учня (вручну)</h3>
+            <p class="muted small" style="margin-top:-6px;">
+              Учні спільні для всіх вчителів. Якщо учень вже існує в базі — просто виберіть клас і він зʼявиться в таблиці.
+            </p>
+
+            <label>Ім'я та прізвище учня</label>
+            <input id="studentFullName" placeholder="Наприклад: Іваненко Марія" />
+
+            <label>Клас</label>
+            <select id="studentClassSelect" class="select"></select>
+
+            <label>Логін</label>
+            <input id="studentLogin" placeholder="Наприклад: maria7a" />
+
+            <label>Пароль</label>
+            <input id="studentPassword" placeholder="Наприклад: 1234" />
+
+            <div class="row gap wrap" style="margin-top:12px;">
+              <button class="btn btn-ghost" id="btnGenerateCreds" type="button">🔄 Згенерувати логін/пароль</button>
+              <button class="btn btn-green" id="btnSaveStudent" type="button">💾 Зберегти учня</button>
+            </div>
+
+            <button class="btn btn-ghost w100" id="btnCloseAddStudent" style="margin-top:10px;">✖ Закрити</button>
+
+            <div class="muted small" id="addStudentMsg" style="margin-top:10px;"></div>
+          </div>
+        </div>
+
+        <!-- TEACHER GRADES -->
+        <div id="tPageGrades" class="hidden">
+          <div class="content-head">
+            <h2>🧾 Оцінки</h2>
+          </div>
+
+          <div class="card">
+            <div class="row gap wrap">
+              <select id="tGradesClass" class="select"></select>
+              <select id="tGradesStudent" class="select"></select>
+              <input id="tGradesWork" placeholder="Тип роботи (контрольна, твір...)" />
+              <input id="tGradesValue" placeholder="Оцінка (1-12)" />
+              <button class="btn btn-green" id="btnTeacherAddGrade">Додати оцінку</button>
+            </div>
+            <div class="muted small" id="tGradesMsg" style="margin-top:10px;"></div>
+          </div>
+
+          <div class="card" style="margin-top:14px;">
+            <h3>Останні виставлені оцінки</h3>
+            <div id="tGradesList"></div>
+          </div>
+        </div>
+
+        <!-- TEACHER SCHEDULE -->
+        <div id="tPageSchedule" class="hidden">
+          <div class="content-head">
+            <h2>📅 Розклад</h2>
+          </div>
+
+          <div class="card">
+            <div class="row gap wrap">
+              <select id="tSchClass" class="select"></select>
+              <select id="tSchDay" class="select">
+                <option value="1">Пн</option>
+                <option value="2">Вт</option>
+                <option value="3">Ср</option>
+                <option value="4">Чт</option>
+                <option value="5">Пт</option>
+              </select>
+              <input id="tSchTime" placeholder="Час (наприклад 9:00-10:20)" />
+              <select id="tSchSubject" class="select"></select>
+              <input id="tSchRoom" placeholder="Кабінет" />
+              <button class="btn btn-green" id="btnTeacherAddLesson">Додати урок</button>
+            </div>
+            <div class="muted small" id="tSchMsg" style="margin-top:10px;"></div>
+          </div>
+
+          <div class="card" style="margin-top:14px;">
+            <h3>Поточний розклад (вибраний клас)</h3>
+            <div id="tSchList"></div>
+          </div>
+        </div>
+
+        <!-- TEACHER PROFILE -->
+        <div id="tPageProfile" class="hidden">
+          <div class="content-head">
+            <h2>👤 Мій профіль (Вчитель)</h2>
+          </div>
+
+          <div class="profile-grid">
+            <div class="profile-card">
+              <div class="avatar-big">👩‍🏫</div>
+              <div class="profile-name" id="tpName">—</div>
+              <div class="muted" id="tpSubject">—</div>
+              <div class="muted small">👥 Класи: <span id="tpClasses">—</span></div>
+
+              <div class="profile-stats">
+                <div class="stat">
+                  <div class="muted small">Виставлено оцінок</div>
+                  <div class="stat-val" id="tpGradesCount">0</div>
+                </div>
+                <div class="stat">
+                  <div class="muted small">Монет видано</div>
+                  <div class="stat-val" id="tpCoinsGiven">0</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="profile-card">
+              <h3>Налаштування (MVP)</h3>
+              <div class="setting">
+                <div>
+                  <div class="setting-title">Автоматичні сповіщення</div>
+                  <div class="muted small">Сповіщати про низьку успішність</div>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" checked>
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="setting">
+                <div>
+                  <div class="setting-title">Темний режим</div>
+                  <div class="muted small">Змінити тему інтерфейсу</div>
+                </div>
+                <label class="switch">
+                  <input type="checkbox">
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+    </div>
+  </section>
+
+  <!-- ===== STUDENT APP ===== -->
+  <section class="student-app hidden" id="screenStudentApp">
+
+    <header class="student-topbar">
+      <div class="student-top-left">
+        <div class="student-logo">🎓</div>
+        <div>
+          <div class="student-app-title">Електронний журнал</div>
+          <div class="student-user-line">
+            <div class="stName" id="stTopName">—</div>
+            <div class="badge ghost" id="stTopClass">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="student-top-right">
+        <div class="pill coins">🪙 <b id="stTopCoins">0</b> монет</div>
+        <div class="pill points">⭐ <b id="stTopPoints">0</b> балів</div>
+        <button class="btn btn-ghost" id="btnLogoutStudent">↩ Вийти</button>
+      </div>
+    </header>
+
+    <div class="student-layout">
+      <aside class="student-sidebar">
+        <button class="nav-item active" data-spage="home">🏠 Головна</button>
+        <button class="nav-item" data-spage="grades">🧾 Оцінки</button>
+        <button class="nav-item" data-spage="schedule">📅 Розклад</button>
+        <button class="nav-item" data-spage="motivation">🏆 Мотивація</button>
+        <button class="nav-item" data-spage="profile">👤 Мій профіль</button>
+        <button class="nav-item" data-spage="shop">🛍 Магазин</button>
+      </aside>
+
+      <section class="student-content">
+
+        <div id="sPageHome">
+          <div class="content-head">
+            <h2>🏠 Головна панель</h2>
+            <div class="muted small" id="sToday">—</div>
+          </div>
+
+          <div class="kpi-grid">
+            <div class="kpi">
+              <div class="kpi-title">Середній бал</div>
+              <div class="kpi-value" id="kpiAvg">—</div>
+              <div class="kpi-sub green" id="kpiAvgHint">+0 за місяць</div>
+            </div>
+            <div class="kpi">
+              <div class="kpi-title">Мотиваційні бали</div>
+              <div class="kpi-value" id="kpiPoints">0</div>
+              <div class="kpi-sub green">+0 за тиждень</div>
+            </div>
+            <div class="kpi">
+              <div class="kpi-title">Монети</div>
+              <div class="kpi-value" id="kpiCoins">0</div>
+              <div class="kpi-sub green" id="kpiCoinsHint">+0 за хороші оцінки</div>
+            </div>
+            <div class="kpi">
+              <div class="kpi-title">Відзнаки</div>
+              <div class="kpi-value" id="kpiBadges">0/0</div>
+              <div class="kpi-sub green">+0 цього місяця</div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-top:14px;padding:0;overflow:hidden;">
+            <div class="card-head-blue">Останні оцінки</div>
+            <div id="sRecentGrades"></div>
+          </div>
+        </div>
+
+        <div id="sPageGrades" class="hidden">
+          <div class="content-head">
+            <h2>🧾 Оцінки</h2>
+            <select id="sGradesFilter" class="select">
+              <option value="all">Всі предмети</option>
+            </select>
+          </div>
+          <div id="sGradesBlocks"></div>
+        </div>
+
+        <div id="sPageSchedule" class="hidden">
+          <div class="content-head">
+            <h2>📅 Розклад занять</h2>
+          </div>
+
+          <div class="card schedule-card">
+            <div class="schedule-tabs">
+              <button class="daytab active" data-day="1">Пн</button>
+              <button class="daytab" data-day="2">Вт</button>
+              <button class="daytab" data-day="3">Ср</button>
+              <button class="daytab" data-day="4">Чт</button>
+              <button class="daytab" data-day="5">Пт</button>
+              <button class="daytab" data-day="6">Сб</button>
+              <button class="daytab" data-day="7">Нд</button>
+            </div>
+            <div class="schedule-body">
+              <div class="muted" id="sSchHint">Розклад ще не заповнено вчителем.</div>
+              <div id="sScheduleList"></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="sPageMotivation" class="hidden">
+          <div class="content-head">
+            <h2>🏆 Мотивація та відзнаки</h2>
+            <div class="pill orange">🏆 <b id="sBadgesCounter">0</b> / <span id="sBadgesTotal">0</span> відзнак</div>
+          </div>
+
+          <div class="card" style="margin-top:12px;">
+            <h3>Відзнаки</h3>
+            <div class="badges-grid" id="badgesGrid"></div>
+          </div>
+
+          <div class="card" style="margin-top:12px;">
+            <h3>Рідкісні нагороди</h3>
+            <div class="rare-grid" id="rareGrid"></div>
+          </div>
+        </div>
+
+        
+        <div id="sPageProfile" class="hidden">
+          <div class="content-head">
+            <h2>👤 Мій профіль</h2>
+          </div>
+
+          <div class="profile-grid">
+            <!-- LEFT: AVATAR -->
+            <div class="profile-card">
+              <div class="avatar-wrap">
+                <div class="avatar-big student" id="avatarBig">🎓</div>
+                <label class="avatar-btn" title="Змінити аватар">
+                  ✏️
+                  <input type="file" id="avatarFile" accept="image/*" hidden />
+                </label>
+              </div>
+
+              <div class="profile-name" id="spName">—</div>
+              <div class="muted center" id="spClass">—</div>
+
+              <div class="profile-stats">
+                <div class="stat">
+                  <div class="muted small">Монети</div>
+                  <div class="stat-val" id="spCoins">0</div>
+                </div>
+                <div class="stat">
+                  <div class="muted small">Бали</div>
+                  <div class="stat-val" id="spPoints">0</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- MIDDLE: SETTINGS -->
+            <div class="profile-card">
+              <h3>Налаштування профілю</h3>
+
+              <div class="setting">
+                <div>
+                  <div class="setting-title">Рамка аватара</div>
+                  <div class="muted small">Виберіть стиль рамки (потрібна покупка в магазині)</div>
+                </div>
+                <div class="row gap wrap">
+                  <select id="frameStyleSelect" class="select" style="min-width:160px">
+                    <option value="gold">Золота</option>
+                    <option value="neon">Неон</option>
+                    <option value="silver">Срібна</option>
+                  </select>
+                  <label class="switch" title="Увімкнути/вимкнути рамку">
+                    <input type="checkbox" id="frameEnabled">
+                    <span class="slider"></span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="setting">
+                <div>
+                  <div class="setting-title">Тема «Зима»</div>
+                  <div class="muted small">Увімкніть зимовий стиль (потрібна покупка)</div>
+                </div>
+                <label class="switch" title="Тема Зима">
+                  <input type="checkbox" id="winterThemeEnabled">
+                  <span class="slider"></span>
+                </label>
+              </div>
+
+              <div class="setting">
+                <div>
+                  <div class="setting-title">Сніг</div>
+                  <div class="muted small">Працює тільки коли увімкнена тема «Зима»</div>
+                </div>
+                <label class="switch" title="Сніг">
+                  <input type="checkbox" id="snowEnabled">
+                  <span class="slider"></span>
+                </label>
+              </div>
+
+              <div class="setting">
+                <div>
+                  <div class="setting-title">Анімований аватар</div>
+                  <div class="muted small">Ефект можна вибрати (потрібна покупка)</div>
+                </div>
+
+                <div class="row gap wrap">
+                  <select id="avatarAnimEffect" class="select" style="min-width:160px">
+                    <option value="pulse">Пульс</option>
+                    <option value="float">Плавання</option>
+                    <option value="glow">Світіння</option>
+                  </select>
+
+                  <label class="switch" title="Анімація аватара">
+                    <input type="checkbox" id="avatarAnimEnabled">
+                    <span class="slider"></span>
+                  </label>
+                </div>
+              </div>
+
+              <h3 style="margin-top:16px;">Привілеї</h3>
+              <div class="collection-box" id="privilegesBox"></div>
+            </div>
+
+            <!-- RIGHT: COLLECTION + EQUIP -->
+            <div class="profile-card">
+              <h3>Колекція</h3>
+              <div class="collection-box" id="collectionBox"></div>
+
+              <h3 style="margin-top:14px;">Екіпіровка</h3>
+              <div class="equip-list" id="equipList"></div>
+            </div>
+          </div>
+        </div>
+
+
+        <div id="sPageShop" class="hidden">
+          <div class="content-head">
+            <h2>🛍 Магазин</h2>
+            <div class="pill coins">🪙 <b id="shopCoins">0</b> монет</div>
+          </div>
+
+          <div class="shop-tabs">
+            <button class="shop-tab active" data-tab="all">Всі товари</button>
+            <button class="shop-tab" data-tab="profile">Для профілю</button>
+            <button class="shop-tab" data-tab="privileges">Привілеї</button>
+            <button class="shop-tab" data-tab="special">Спеціальні</button>
+            <button class="shop-tab" data-tab="exchange">Обмін</button>
+          </div>
+
+          <div id="shopExchangeWrap" class="hidden"></div>
+          <div class="shop-grid" id="shopGrid"></div>
+        </div>
+
+      </section>
+    </div>
+  </section>
+
+</main>
+
+<!-- Excel export (SheetJS) -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>
