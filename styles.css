@@ -36,7 +36,6 @@ body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-ser
 
 .role-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:10px}
 .role-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:26px;text-align:center}
-.role-card.selected{border:2px solid #4e78a8}
 .role-icon{width:64px;height:64px;border-radius:18px;display:grid;place-items:center;margin:0 auto 10px;font-size:28px}
 .role-icon.green{background:rgba(49,194,107,.12);color:var(--green)}
 .role-icon.purple{background:rgba(142,85,199,.12);color:var(--purple)}
