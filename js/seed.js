@@ -3,8 +3,26 @@
    ========================= */
 function ensureSeed() {
   const db = dbLoad();
+  if (!db.attendance) db.attendance = [];
 
   // класи створюються при першій реєстрації вчителя
+
+  if (!db.badges || db.badges.length === 0) {
+    db.badges = [
+      { id:"att_mvp",        icon:"📅", name:"Відвідуваність", desc:"Відмічено присутність хоча б на одному уроці", rewardCoins:20 },
+      { id:"legend_avg11",   icon:"🏅", name:"Легенда класу", desc:"Середній бал 11+ (мінімум 3 оцінки)", rewardCoins:200 },
+      { id:"projects_3x12",  icon:"🛠️", name:"Майстер проєктів", desc:"3 проєкти на 12 (робота містить слово «проєкт»)", rewardCoins:250 },
+    ];
+  }
+
+  // Rare rewards (upsert by id)
+  db.rareRewards = Array.isArray(db.rareRewards) ? db.rareRewards : [];
+  const rrById = Object.fromEntries(db.rareRewards.map(r => [r.id, r]));
+  const rrMust = [
+    { id:"rare_noskips_30", title:"Без пропусків", desc:"30 днів без пропусків", rewardCoins:150, icon:"✨" },
+  ];
+  rrMust.forEach(r => { rrById[r.id] = { ...(rrById[r.id]||{}), ...r }; });
+  db.rareRewards = Object.values(rrById);
 
   if (!db.shopItems || db.shopItems.length === 0) {
     db.shopItems = [

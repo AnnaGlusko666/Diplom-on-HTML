@@ -1,6 +1,15 @@
 /* =========================
    TEACHER
    ========================= */
+
+function teacherUpdateBell(teacherId){
+  const n = msgUnreadCount(teacherId);
+  const badge = document.getElementById("teacherBellCount");
+  if(!badge) return;
+  badge.textContent = String(n);
+  badge.classList.toggle("hidden", n<=0);
+}
+
 function teacherFillSelects(teacher) {
   const db = dbLoad();
   const classes = db.classes.filter(c => teacher.classIds.includes(c.id));
@@ -10,6 +19,9 @@ function teacherFillSelects(teacher) {
 
   $("#tGradesClass").innerHTML = classes.map(c => `<option value="${c.id}">${c.name}</option>`).join("");
   $("#tSchClass").innerHTML = classes.map(c => `<option value="${c.id}">${c.name}</option>`).join("");
+
+  const attSel = document.getElementById("attClassSelect");
+  if(attSel){ attSel.innerHTML = classes.map(c => `<option value="${c.id}">${c.name}</option>`).join(""); }
 
   $("#panelSubjectSelect").innerHTML = `<option value="${teacher.subject}">${teacher.subject}</option>`;
 
@@ -231,6 +243,7 @@ function teacherAddGrade(teacherId) {
     subject: teacher.subject,
     work,
     value,
+    teacherId: teacher.id,
     teacherName: teacher.name,
     createdAt: Date.now()
   });
@@ -346,3 +359,302 @@ function teacherRenderProfile(teacherId) {
   $("#tpCoinsGiven").textContent = String(Number(teacher.coinsGivenTotal||0));
 }
 
+
+/* =========================
+   MESSAGES
+   ========================= */
+function teacherRenderMessages(teacherId){
+  const db = dbLoad();
+  const list = db.messages
+    .filter(m => m.toUserId===teacherId || m.fromUserId===teacherId)
+    .sort((a,b)=>b.createdAt-a.createdAt);
+
+  const host = document.getElementById("tMessagesHost");
+  if(!host) return;
+  if(!list.length){ host.innerHTML = '<p class="muted">Немає повідомлень.</p>'; return; }
+
+  host.innerHTML = list.map(m=>{
+    const incoming = m.toUserId===teacherId;
+    const from = db.users.find(u=>u.id===m.fromUserId);
+    const to = db.users.find(u=>u.id===m.toUserId);
+    const head = incoming ? `${from?.name||"—"} → Ви` : `Ви → ${to?.name||"—"}`;
+    const kind = m.kind==="grade_question" ? "Питання щодо оцінки" : (m.kind==="reply" ? "Відповідь" : (m.kind==="award" ? "Нарахування" : m.kind));
+    const canReply = incoming && m.kind==="grade_question";
+    return `
+      <div class="card" style="margin-bottom:10px;">
+        <div class="row" style="justify-content:space-between; margin:0;">
+          <div><b>${head}</b> <span class="badge ghost">${kind}</span></div>
+          <div class="muted small">${fmtDate(m.createdAt)}</div>
+        </div>
+        <div style="margin-top:8px; white-space:pre-wrap;">${escapeHtml(m.text||"")}</div>
+        ${canReply ? `<div class="row" style="justify-content:flex-end;">
+            <button class="btn btn-ghost" data-reply-msg="${m.id}">Відповісти</button>
+          </div>` : ``}
+      </div>
+    `;
+  }).join("");
+
+  document.querySelectorAll("[data-reply-msg]").forEach(b=>{
+    b.onclick = ()=> teacherReplyToMessage(teacherId, b.dataset.replyMsg);
+  });
+}
+
+function teacherReplyToMessage(teacherId, msgId){
+  const db = dbLoad();
+  const m = db.messages.find(x=>x.id===msgId);
+  if(!m) return;
+  const student = db.users.find(u=>u.id===m.fromUserId);
+
+  modalShow({
+    title: "Відповідь учню",
+    bodyHTML: `
+      <div class="muted small">Учень: <b>${escapeHtml(student?.name||"—")}</b></div>
+      <div style="margin-top:10px;">
+        <label class="lbl">Ваша відповідь</label>
+        <textarea id="teacherReplyText" rows="4" placeholder="Напишіть відповідь або домовтеся про перездачу..."></textarea>
+      </div>
+    `,
+    actions: [
+      {text:"Скасувати", className:"btn btn-ghost", onClick: modalClose},
+      {text:"Надіслати", className:"btn", onClick: ()=>{
+        const text=(document.getElementById("teacherReplyText")?.value||"").trim();
+        if(!text) return;
+        msgSend({
+          fromUserId: teacherId,
+          toUserId: m.fromUserId,
+          kind: "reply",
+          text,
+          meta: { inReplyTo: m.id, gradeId: m.meta?.gradeId || null }
+        });
+        modalClose();
+        teacherRenderMessages(teacherId);
+        teacherUpdateBell(teacherId);
+      }}
+    ]
+  });
+}
+
+/* =========================
+   EXTRA (AWARDS)
+   ========================= */
+function teacherRenderExtra(teacherId){
+  const db = dbLoad();
+  const teacher = db.users.find(u=>u.id===teacherId && u.role==="teacher");
+  if(!teacher) return;
+
+  const classes = db.classes.filter(c => teacher.classIds.includes(c.id));
+  const classSel = document.getElementById("extraClassSelect");
+  classSel.innerHTML = classes.map(c=>`<option value="${c.id}">${c.name}</option>`).join("");
+
+  const targetSel = document.getElementById("extraTargetSelect");
+  const studentWrap = document.getElementById("extraStudentWrap");
+  const studentSel = document.getElementById("extraStudentSelect");
+
+  function fillStudents(){
+    const classId = classSel.value;
+    const students = db.users.filter(u=>u.role==="student" && u.classId===classId);
+    studentSel.innerHTML = students.map(s=>`<option value="${s.id}">${s.name}</option>`).join("");
+  }
+  fillStudents();
+
+  function syncTarget(){
+    const isStudent = targetSel.value==="student";
+    studentWrap.classList.toggle("hidden", !isStudent);
+  }
+  syncTarget();
+
+  classSel.onchange = () => { fillStudents(); };
+  targetSel.onchange = () => { syncTarget(); };
+
+  document.getElementById("btnExtraSend").onclick = () => {
+    const classId = classSel.value;
+    const target = targetSel.value;
+    const kind = document.getElementById("extraKindSelect").value; // points|coins
+    const amount = Math.max(1, parseInt(document.getElementById("extraAmount").value||"1",10));
+    const reason = (document.getElementById("extraReason").value||"").trim();
+
+    const status = document.getElementById("extraStatus");
+    status.textContent = "";
+
+    if(!reason){ status.textContent = "Будь ласка, напишіть за що нарахування."; return; }
+
+    const students = db.users.filter(u=>u.role==="student" && u.classId===classId);
+    let targets = students;
+
+    if(target==="student"){
+      const sid = studentSel.value;
+      targets = students.filter(s=>s.id===sid);
+      if(!targets.length){ status.textContent="Оберіть учня."; return; }
+    }
+
+    targets.forEach(st=>{
+      if(kind==="coins") st.coins = (st.coins||0) + amount;
+      if(kind==="points") st.points = (st.points||0) + amount;
+
+      db.messages.push({
+        id: uid(),
+        fromUserId: teacherId,
+        toUserId: st.id,
+        kind: "award",
+        text: `${kind==="coins" ? "Нараховано монети" : "Нараховано бали"}: ${amount}.\nЗа що: ${reason}`,
+        meta: { kind, amount, reason, classId, studentId: st.id },
+        createdAt: Date.now(),
+        read: false
+      });
+    });
+
+    dbSave(db);
+    status.textContent = `Нараховано: ${targets.length} учн.`;
+    document.getElementById("extraReason").value = "";
+  };
+}
+
+/* =========================
+   ATTENDANCE (Teacher)
+   ========================= */
+function teacherRenderAttendance(teacherId){
+  const db = dbLoad();
+  const teacher = db.users.find(u => u.id===teacherId && u.role==="teacher");
+  if(!teacher) return;
+
+  // default date = today
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+
+  const dateInp = document.getElementById("attDate");
+  if(dateInp && !dateInp.value) dateInp.value = `${yyyy}-${mm}-${dd}`;
+
+  const classSel = document.getElementById("attClassSelect");
+  if(!classSel) return;
+
+  // урок: dropdown from global list
+  const lessonSel = document.getElementById("attLesson");
+  if(lessonSel && !lessonSel.dataset.ready){
+    const opts = [
+      {v:"", t:"— не вказано —"},
+      ...((window.SUBJECTS_UA||[]).map(s => ({v:s, t:s}))),
+    ];
+    lessonSel.innerHTML = opts.map(o => `<option value="${escapeHtml(o.v)}">${escapeHtml(o.t)}</option>`).join("");
+    lessonSel.dataset.ready = "1";
+  }
+
+  const renderList = () => {
+    const classId = classSel.value;
+    const cls = db.classes.find(c => c.id===classId);
+    const students = db.users.filter(u => u.role==="student" && u.classId===classId);
+
+    const dateVal = (dateInp?.value||"").trim();
+    const host = document.getElementById("attStudentsHost");
+    if(!host) return;
+
+    // load existing marks for this class/date
+    const att = (db.attendance||[]).filter(a => a.classId===classId && a.date===dateVal);
+    const presentSet = new Set(att.filter(a=>a.present).map(a=>a.studentId));
+
+    if(!students.length){
+      host.innerHTML = `<div class="muted">У цьому класі поки немає учнів.</div>`;
+      return;
+    }
+
+    host.innerHTML = `
+      <div class="muted" style="margin-bottom:8px;">Клас: <b>${escapeHtml(cls?.name||"—")}</b></div>
+      <div class="card" style="padding:0; overflow:hidden;">
+        <table class="att-table">
+          <thead>
+            <tr>
+              <th style="text-align:left;">Учні</th>
+              <th style="text-align:left; width:160px;">Був/не був</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${students.map(st => {
+              const present = presentSet.has(st.id);
+              return `
+                <tr>
+                  <td class="att-name">${escapeHtml(st.name)}</td>
+                  <td class="att-mark">
+                    <button type="button" class="attToggle" data-st="${escapeHtml(st.id)}" data-present="${present?"1":"0"}" title="Натисніть, щоб змінити">
+                      ${present ? "✅" : "❌"}
+                    </button>
+                  </td>
+                </tr>
+              `;
+            }).join("")}
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    host.querySelectorAll(".attToggle").forEach(btn => {
+      btn.onclick = () => {
+        const cur = btn.dataset.present === "1";
+        const next = !cur;
+        btn.dataset.present = next ? "1" : "0";
+        btn.textContent = next ? "✅" : "❌";
+      };
+    });
+  };
+
+  classSel.onchange = renderList;
+  if(dateInp) dateInp.onchange = renderList;
+
+  renderList();
+
+  const btn = document.getElementById("btnSaveAttendance");
+  if(btn){
+    btn.onclick = () => {
+      const db2 = dbLoad();
+      const teacher2 = db2.users.find(u => u.id===teacherId && u.role==="teacher");
+      const classId = classSel.value;
+      const dateVal = (document.getElementById("attDate")?.value||"").trim();
+      const lesson = (document.getElementById("attLesson")?.value||"").trim();
+
+      const msg = document.getElementById("attMsg");
+      if(msg) msg.textContent = "";
+
+      if(!dateVal){
+        if(msg) msg.textContent = "Оберіть дату";
+        return;
+      }
+
+      const host2 = document.getElementById("attStudentsHost");
+      const toggles = host2 ? Array.from(host2.querySelectorAll(".attToggle")) : [];
+      if(!toggles.length){
+        if(msg) msg.textContent = "Немає учнів для відмітки";
+        return;
+      }
+
+      // remove old marks for class/date (MVP)
+      db2.attendance = (db2.attendance||[]).filter(a => !(a.classId===classId && a.date===dateVal));
+
+      toggles.forEach(t => {
+        const stId = t.dataset.st;
+        const present = t.dataset.present === "1";
+        db2.attendance.push({
+          id: uid(),
+          studentId: stId,
+          classId,
+          date: dateVal,
+          lesson,
+          present,
+          teacherId: teacher2?.id || "",
+          createdAt: Date.now()
+        });
+      });
+
+      dbSave(db2);
+
+      // award attendance badge automatically (next time student opens мотивацію/кабінет)
+      // (optional) notify students for present mark
+      toggles.forEach(t => {
+        if(t.dataset.present === "1"){
+          msgSend(t.dataset.st, `📅 Відвідуваність: відмічено <b>присутність</b> (${escapeHtml(dateVal)}${lesson?`, ${escapeHtml(lesson)}`:""})`);
+        }
+      });
+
+      if(msg) msg.textContent = "Збережено ✅";
+    };
+  }
+}

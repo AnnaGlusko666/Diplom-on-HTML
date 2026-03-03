@@ -114,6 +114,9 @@
           <option>Англійська мова</option>
         </select>
 
+        <label>Спеціальний код</label>
+        <input id="tSpecCode" placeholder="Введіть спеціальний код (admim1234)" />
+
         <label>Логін</label>
         <input id="tLogin" placeholder="Придумайте логін" />
 
@@ -193,6 +196,7 @@
       </div>
 
       <div class="teacher-top-right">
+        <button class="btn btn-ghost bell" id="btnTeacherBell" title="Повідомлення">🔔 <span class="bell-badge hidden" id="teacherBellCount">0</span></button>
         <button class="btn btn-ghost" id="btnLogoutTeacher">↩ Вийти</button>
       </div>
     </header>
@@ -202,6 +206,9 @@
         <button class="nav-item active" data-tpage="panel">👥 Панель вчителя</button>
         <button class="nav-item" data-tpage="grades">🧾 Оцінки</button>
         <button class="nav-item" data-tpage="schedule">📅 Розклад</button>
+        <button class="nav-item" data-tpage="attendance">✅ Відвідуваність</button>
+        <button class="nav-item" data-tpage="extra">🧩 Додатково</button>
+        <button class="nav-item" data-tpage="messages">🔔 Повідомлення</button>
         <button class="nav-item" data-tpage="profile">👤 Мій профіль</button>
       </aside>
 
@@ -310,6 +317,86 @@
           </div>
         </div>
 
+        <!-- TEACHER EXTRA (AWARDS) -->
+        <div 
+        <div id="tPageAttendance" class="hidden">
+          <div class="content-head">
+            <h2>✅ Відвідуваність</h2>
+          </div>
+
+          <div class="card">
+            <div class="row gap wrap">
+              <div class="field" style="min-width:220px;">
+                <label>Клас</label>
+                <select id="attClassSelect"></select>
+              </div>
+              <div class="field" style="min-width:180px;">
+                <label>Дата</label>
+                <input type="date" id="attDate" />
+              </div>
+              <div class="field" style="flex:1; min-width:240px;">
+                <label>Урок (необов’язково)</label>
+                <select id="attLesson" class="select"></select>
+              </div>
+            </div>
+
+            <div id="attStudentsHost" style="margin-top:12px;"></div>
+
+            <div class="row gap" style="margin-top:12px; align-items:center;">
+              <button class="btn btn-green" id="btnSaveAttendance">Зберегти</button>
+              <span class="muted" id="attMsg"></span>
+            </div>
+          </div>
+        </div>
+
+        <div id="tPageExtra" class="hidden">
+          <div class="content-head">
+            <h2>🧩 Додатково</h2>
+          </div>
+
+          <div class="card">
+            <h3 style="margin-top:0;">Нарахування (бали / монети)</h3>
+            <div class="row gap wrap" style="margin-top:10px;">
+              <select id="extraClassSelect" class="select"></select>
+              <select id="extraTargetSelect" class="select">
+                <option value="class">Весь клас</option>
+                <option value="student">Окремий учень</option>
+              </select>
+              <div id="extraStudentWrap" class="hidden">
+                <select id="extraStudentSelect" class="select"></select>
+              </div>
+            </div>
+
+            <div class="row gap wrap" style="margin-top:10px;">
+              <select id="extraKindSelect" class="select">
+                <option value="points">⭐ Бали</option>
+                <option value="coins">🪙 Монети</option>
+              </select>
+              <input id="extraAmount" type="number" min="1" value="1" placeholder="Кількість" />
+            </div>
+
+            <div style="margin-top:10px;">
+              <label class="lbl">За що</label>
+              <textarea id="extraReason" rows="3" placeholder="Наприклад: активність на уроці, допомога однокласникам..."></textarea>
+            </div>
+
+            <div class="row" style="justify-content:flex-end; margin-top:12px;">
+              <button class="btn btn-green" id="btnExtraSend" type="button">Нарахувати</button>
+            </div>
+            <div class="muted small" id="extraStatus" style="margin-top:8px;"></div>
+          </div>
+        </div>
+
+        <!-- TEACHER MESSAGES -->
+        <div id="tPageMessages" class="hidden">
+          <div class="content-head">
+            <h2>🔔 Повідомлення</h2>
+          </div>
+          <div class="card">
+            <div id="tMessagesHost"></div>
+          </div>
+        </div>
+
         <!-- TEACHER PROFILE -->
         <div id="tPageProfile" class="hidden">
           <div class="content-head">
@@ -381,6 +468,7 @@
       </div>
 
       <div class="student-top-right">
+        <button class="btn btn-ghost bell" id="btnStudentBell" title="Повідомлення">🔔 <span class="bell-badge hidden" id="studentBellCount">0</span></button>
         <div class="pill coins">🪙 <b id="stTopCoins">0</b> монет</div>
         <div class="pill points">⭐ <b id="stTopPoints">0</b> балів</div>
         <button class="btn btn-ghost" id="btnLogoutStudent">↩ Вийти</button>
@@ -393,6 +481,7 @@
         <button class="nav-item" data-spage="grades">🧾 Оцінки</button>
         <button class="nav-item" data-spage="schedule">📅 Розклад</button>
         <button class="nav-item" data-spage="motivation">🏆 Мотивація</button>
+        <button class="nav-item" data-spage="messages">🔔 Повідомлення</button>
         <button class="nav-item" data-spage="profile">👤 Мій профіль</button>
         <button class="nav-item" data-spage="shop">🛍 Магазин</button>
       </aside>
@@ -483,6 +572,15 @@
           </div>
         </div>
 
+        <div id="sPageMessages" class="hidden">
+          <div class="content-head">
+            <h2>🔔 Повідомлення</h2>
+          </div>
+          <div class="card">
+            <div id="sMessagesHost"></div>
+          </div>
+        </div>
+
         
         <div id="sPageProfile" class="hidden">
           <div class="content-head">
@@ -511,6 +609,17 @@
                 <div class="stat">
                   <div class="muted small">Бали</div>
                   <div class="stat-val" id="spPoints">0</div>
+                </div>
+              </div>
+
+              <div class="profile-stats" style="margin-top:10px;">
+                <div class="stat">
+                  <div class="muted small">Мої пропуски</div>
+                  <div class="stat-val" id="spAbsences">0</div>
+                </div>
+                <div class="stat">
+                  <div class="muted small">Відзнаки</div>
+                  <div class="stat-val"><span id="spBadgesEarned">0</span>/<span id="spBadgesTotal">0</span></div>
                 </div>
               </div>
             </div>

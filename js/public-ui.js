@@ -30,6 +30,7 @@ function initPublic() {
     const res = teacherRegister({
       name: $("#tName").value,
       subject: $("#tSubject").value,
+      specialCode: $("#tSpecCode").value,
       login: $("#tLogin").value,
       password: p1
     });

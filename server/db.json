@@ -1,0 +1,32 @@
+{
+  "users": [],
+  "classes": [],
+  "grades": [],
+  "schedules": {},
+  "shopItems": [],
+  "purchases": [],
+  "badges": [
+    {
+      "id": "att_mvp",
+      "icon": "📅",
+      "name": "Відвідуваність",
+      "desc": "Відмічено присутність хоча б на одному уроці",
+      "rewardCoins": 20
+    },
+    {
+      "id": "legend_avg11",
+      "icon": "🏅",
+      "name": "Легенда класу",
+      "desc": "Середній бал 11+ (мінімум 3 оцінки)",
+      "rewardCoins": 200
+    },
+    {
+      "id": "projects_3x12",
+      "icon": "🛠️",
+      "name": "Майстер проєктів",
+      "desc": "3 проєкти на 12 (робота містить слово «проєкт»)",
+      "rewardCoins": 250
+    }
+  ],
+  "attendance": []
+}

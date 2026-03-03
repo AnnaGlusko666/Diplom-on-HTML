@@ -71,7 +71,54 @@ function studentRenderHome(studentId) {
       </div>
     `;
   }).join("");
+
+  document.querySelectorAll("[data-ask-grade]").forEach(btn=>{
+    btn.onclick = () => studentAskGradeQuestion(studentId, btn.dataset.askGrade);
+  });
 }
+
+
+
+function studentUpdateBell(studentId){
+  const n = msgUnreadCount(studentId);
+  const badge = document.getElementById("studentBellCount");
+  if(!badge) return;
+  badge.textContent = String(n);
+  badge.classList.toggle("hidden", n<=0);
+}
+
+function studentRenderMessages(studentId){
+  const db = dbLoad();
+  const list = db.messages
+    .filter(m => m.toUserId===studentId || m.fromUserId===studentId)
+    .sort((a,b)=>b.createdAt-a.createdAt);
+
+  const host = document.getElementById("sMessagesHost");
+  if(!host) return;
+  if(!list.length){ host.innerHTML = '<p class="muted">Немає повідомлень.</p>'; return; }
+
+  host.innerHTML = list.map(m=>{
+    const meOut = m.fromUserId===studentId;
+    const from = db.users.find(u=>u.id===m.fromUserId);
+    const to = db.users.find(u=>u.id===m.toUserId);
+    const head = meOut ? `Ви → ${to?.name||"—"}` : `${from?.name||"—"} → Ви`;
+    const kind = m.kind==="award" ? "Нарахування" : (m.kind==="grade_question" ? "Питання щодо оцінки" : (m.kind==="reply" ? "Відповідь" : m.kind));
+    return `
+      <div class="card" style="margin-bottom:10px;">
+        <div class="row" style="justify-content:space-between; margin:0;">
+          <div><b>${head}</b> <span class="badge ghost">${kind}</span></div>
+          <div class="muted small">${fmtDate(m.createdAt)}</div>
+        </div>
+        <div style="margin-top:8px; white-space:pre-wrap;">${escapeHtml(m.text||"")}</div>
+      </div>
+    `;
+  }).join("");
+
+  document.querySelectorAll("[data-ask-grade]").forEach(btn=>{
+    btn.onclick = () => studentAskGradeQuestion(studentId, btn.dataset.askGrade);
+  });
+}
+
 
 function studentInitGradesFilter(studentId) {
   const { grades } = studentGetData(studentId);
@@ -116,7 +163,10 @@ function studentRenderGrades(studentId) {
                     <div class="muted small">${g.teacherName}</div>
                   </div>
                 </div>
-                <div class="subject-meta">${fmtDate(g.createdAt)}</div>
+                <div class="subject-meta">
+                  <div class="muted small">${fmtDate(g.createdAt)}</div>
+                  <button class="btn btn-ghost" data-ask-grade="${g.id}">Оскаржити / питання</button>
+                </div>
               </div>
             `;
           }).join("")}
@@ -124,6 +174,61 @@ function studentRenderGrades(studentId) {
       </div>
     `;
   }).join("");
+
+  document.querySelectorAll("[data-ask-grade]").forEach(btn=>{
+    btn.onclick = () => studentAskGradeQuestion(studentId, btn.dataset.askGrade);
+  });
+}
+
+
+
+function studentAskGradeQuestion(studentId, gradeId){
+  const db = dbLoad();
+  const g = db.grades.find(x=>x.id===gradeId && x.studentId===studentId);
+  if(!g){ return; }
+
+  // find teacher who set the grade (best-effort)
+  const teacher = db.users.find(u => u.role==="teacher" && u.name===g.teacherName && u.subject===g.subject)
+              || db.users.find(u => u.role==="teacher" && u.subject===g.subject);
+
+  if(!teacher){
+    modalShow({
+      title: "Не знайдено вчителя",
+      bodyHTML: "<p class='muted'>Не вдалося визначити вчителя для цієї оцінки.</p>",
+      actions: [{text:"OK", className:"btn"}]
+    });
+    return;
+  }
+
+  modalShow({
+    title: "Оскаржити / задати питання",
+    bodyHTML: `
+      <div class="muted small">Предмет: <b>${escapeHtml(g.subject)}</b> • Робота: <b>${escapeHtml(g.work)}</b> • Оцінка: <b>${g.value}</b></div>
+      <div style="margin-top:10px;">
+        <label class="lbl">Ваше повідомлення</label>
+        <textarea id="gradeAskText" rows="4" placeholder="Опишіть питання або попросіть про перездачу..."></textarea>
+      </div>
+    `,
+    actions: [
+      {text:"Скасувати", className:"btn btn-ghost", onClick: modalClose},
+      {text:"Надіслати", className:"btn", onClick: () => {
+        const text = (document.getElementById("gradeAskText")?.value||"").trim();
+        if(!text){ return; }
+        msgSend({
+          fromUserId: studentId,
+          toUserId: teacher.id,
+          kind: "grade_question",
+          text,
+          meta: { gradeId: g.id, subject:g.subject, work:g.work, value:g.value, studentId }
+        });
+        modalClose();
+        studentUpdateBell(studentId); // outgoing doesn't affect, but OK
+        // show hint
+        const host = document.getElementById("sMessagesHost");
+        if(host) studentRenderMessages(studentId);
+      }}
+    ]
+  });
 }
 
 function studentRenderSchedule(studentId, day) {
@@ -158,8 +263,11 @@ function studentRenderSchedule(studentId, day) {
 }
 
 function studentRenderMotivation(studentId) {
+  autoAwardBadgesForStudent(studentId);
+  autoAwardRareForStudent(studentId);
   const { db, st } = studentGetData(studentId);
   const earned = new Set(st.badgesEarned||[]);
+  const rareEarned = new Set(st.rareEarned||[]);
 
   $("#sBadgesCounter").textContent = String(earned.size);
   $("#sBadgesTotal").textContent = String(db.badges.length);
@@ -178,19 +286,18 @@ function studentRenderMotivation(studentId) {
     `;
   }).join("");
 
-  const rare = [
-    { title:"Легенда класу", desc:"Середній бал 11+ (у майбутньому)", status:"MVP: недоступно", reward:"+200 🪙" },
-    { title:"Без пропусків", desc:"30 днів без пропусків (у майбутньому)", status:"MVP: недоступно", reward:"+150 🪙" },
-    { title:"Майстер проєктів", desc:"3 проєкти на 12 (у майбутньому)", status:"MVP: недоступно", reward:"+250 🪙" },
-  ];
-  $("#rareGrid").innerHTML = rare.map(r => `
-    <div class="rare-card">
-      <div class="rare-title">${r.title}</div>
-      <div class="rare-desc">${r.desc}</div>
-      <div class="rare-status">${r.status}</div>
-      <div class="rare-reward">${r.reward}</div>
-    </div>
-  `).join("");
+  const rare = (db.rareRewards||[]);
+  $("#rareGrid").innerHTML = rare.map(r => {
+    const ok = rareEarned.has(r.id);
+    return `
+      <div class="rare-card ${ok?"ok":""}">
+        <div class="rare-title">${r.icon||"✨"} ${escapeHtml(r.title)}</div>
+        <div class="rare-desc">${escapeHtml(r.desc||"")}</div>
+        <div class="rare-status ${ok?"ok":""}">${ok?"Отримано ✅":"Не отримано"}</div>
+        <div class="rare-reward">+${Number(r.rewardCoins||0)} 🪙</div>
+      </div>
+    `;
+  }).join("");
 }
 
 /* ===== Exchange points to coins: 10 points -> 1 coin ===== */
@@ -376,6 +483,13 @@ function studentRenderProfile(studentId) {
   $("#spClass").textContent = cls ? cls.name : "—";
   $("#spCoins").textContent = st.coins || 0;
   $("#spPoints").textContent = st.points || 0;
+
+  // Absences & badges counters
+  const abs = (db.attendance||[]).filter(a => a.studentId===studentId && a.present === false).length;
+  const earnedBadges = (st.badgesEarned||[]).length;
+  $("#spAbsences").textContent = String(abs);
+  $("#spBadgesEarned").textContent = String(earnedBadges);
+  $("#spBadgesTotal").textContent = String((db.badges||[]).length);
 
   // Avatar (emoji or uploaded image)
   const avatarEl = $("#avatarBig");

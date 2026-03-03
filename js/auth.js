@@ -12,16 +12,25 @@ function genStudentLogin(db) {
   return `student_${existing+1}`;
 }
 
+// Тимчасовий спеціальний код для реєстрації вчителя
+const TEACHER_SPECIAL_CODE = "admim1234";
+
 /* =========================
    AUTH
    ========================= */
-function teacherRegister({name, subject, login, password}) {
+function teacherRegister({name, subject, specialCode, login, password}) {
   const db = dbLoad();
 
   name = (name||"").trim();
   login = (login||"").trim();
   password = (password||"").trim();
   subject = (subject||"").trim();
+  specialCode = (specialCode||"").trim();
+
+  // Реєстрація дозволена тільки вчителю зі спеціальним кодом
+  if (specialCode !== TEACHER_SPECIAL_CODE) {
+    return { ok:false, msg:"Невірний спеціальний код" };
+  }
 
   if (!name) return { ok:false, msg:"Вкажіть ім'я та прізвище" };
   if (!login) return { ok:false, msg:"Вкажіть логін" };
@@ -64,6 +73,8 @@ function loginUser(role, login, password) {
 
 function logout() {
   sessionSave(null);
+  resetGlobalVisuals();
+  modalClose();
   showOnly("#screenRole");
 }
 
