@@ -219,6 +219,28 @@ function awardBadgesForStudent(db, studentId) {
   if (cnt >= 3) give("b_active");
 }
 
+function teacherRecalcGradeBadges(db, studentId) {
+  const st = db.users.find(u => u.id===studentId && u.role==="student");
+  if (!st) return;
+
+  const currentBadges = Array.isArray(st.badgesEarned) ? st.badgesEarned.slice() : [];
+  const oldRewardCoins = currentBadges.reduce((sum, badgeId) => {
+    const badge = (db.badges || []).find(b => b.id === badgeId);
+    return sum + Number(badge?.rewardCoins || 0);
+  }, 0);
+
+  st.badgesEarned = [];
+  awardBadgesForStudent(db, studentId);
+
+  const newRewardCoins = (st.badgesEarned || []).reduce((sum, badgeId) => {
+    const badge = (db.badges || []).find(b => b.id === badgeId);
+    return sum + Number(badge?.rewardCoins || 0);
+  }, 0);
+
+  st.coins = Math.max(0, Number(st.coins || 0) - oldRewardCoins);
+  st.coins = Number(st.coins || 0) + newRewardCoins;
+}
+
 function teacherAddGrade(teacherId) {
   const db = dbLoad();
   const teacher = getTeacher(teacherId);
@@ -250,11 +272,11 @@ function teacherAddGrade(teacherId) {
 
   const deltaCoins = coinsByGrade(value);
   student.coins = Math.max(0, Number(student.coins||0) + deltaCoins);
-  student.points = Number(student.points||0) + value * 5;
+  student.points = Math.max(0, Number(student.points||0) + value * 5);
 
   teacher.coinsGivenTotal = Number(teacher.coinsGivenTotal||0) + Math.max(0, deltaCoins);
 
-  awardBadgesForStudent(db, studentId);
+  teacherRecalcGradeBadges(db, studentId);
   dbSave(db);
 
   $("#tGradesMsg").textContent = `Додано ✅ ${student.name}: ${value} | монети: ${deltaCoins >= 0 ? "+" : ""}${deltaCoins}`;
@@ -264,21 +286,115 @@ function teacherAddGrade(teacherId) {
   teacherRenderTeacherGradesList(teacherId);
 }
 
+function teacherEditGrade(teacherId, gradeId) {
+  const db = dbLoad();
+  const teacher = getTeacher(teacherId);
+  const grade = db.grades.find(g => g.id === gradeId);
+  if (!teacher || !grade) return;
+  if (grade.teacherId !== teacher.id && grade.teacherName !== teacher.name) return;
+
+  const student = db.users.find(u => u.id === grade.studentId && u.role === "student");
+  if (!student) return;
+
+  modalShow({
+    title: "Редагувати оцінку",
+    bodyHTML: `
+      <div class="muted small">Учень: <b>${escapeHtml(student.name || "—")}</b></div>
+      <div class="row gap wrap" style="margin-top:12px;">
+        <div style="flex:1; min-width:220px;">
+          <label class="lbl">Тип роботи</label>
+          <input id="editGradeWork" value="${escapeHtml(grade.work || "")}" />
+        </div>
+        <div style="width:160px;">
+          <label class="lbl">Оцінка</label>
+          <input id="editGradeValue" type="number" min="1" max="12" value="${Number(grade.value) || ""}" />
+        </div>
+      </div>
+    `,
+    actions: [
+      { text:"Скасувати", className:"btn btn-ghost", onClick: modalClose },
+      { text:"Зберегти", className:"btn btn-green", onClick: () => {
+        const newWork = (document.getElementById("editGradeWork")?.value || "").trim();
+        const newValue = Number((document.getElementById("editGradeValue")?.value || "").trim());
+
+        if (!newWork) return alert("Вкажіть тип роботи");
+        if (!Number.isFinite(newValue) || newValue < 1 || newValue > 12) return alert("Оцінка має бути 1-12");
+
+        const oldValue = Number(grade.value || 0);
+        const coinDiff = coinsByGrade(newValue) - coinsByGrade(oldValue);
+        const pointsDiff = (newValue - oldValue) * 5;
+
+        grade.work = newWork;
+        grade.value = newValue;
+        grade.updatedAt = Date.now();
+
+        student.coins = Math.max(0, Number(student.coins || 0) + coinDiff);
+        student.points = Math.max(0, Number(student.points || 0) + pointsDiff);
+        teacher.coinsGivenTotal = Math.max(0, Number(teacher.coinsGivenTotal || 0) + Math.max(0, coinsByGrade(newValue)) - Math.max(0, coinsByGrade(oldValue)));
+
+        teacherRecalcGradeBadges(db, student.id);
+        dbSave(db);
+        modalClose();
+        $("#tGradesMsg").textContent = `Оцінку оновлено ✅ ${student.name}: ${oldValue} → ${newValue}`;
+        teacherRenderTeacherGradesList(teacherId);
+      }}
+    ]
+  });
+}
+
+function teacherDeleteGrade(teacherId, gradeId) {
+  const db = dbLoad();
+  const teacher = getTeacher(teacherId);
+  const idx = db.grades.findIndex(g => g.id === gradeId);
+  if (!teacher || idx < 0) return;
+
+  const grade = db.grades[idx];
+  if (grade.teacherId !== teacher.id && grade.teacherName !== teacher.name) return;
+
+  const student = db.users.find(u => u.id === grade.studentId && u.role === "student");
+  if (!student) return;
+
+  modalShow({
+    title: "Видалити оцінку?",
+    bodyHTML: `
+      <div>Учень: <b>${escapeHtml(student.name || "—")}</b></div>
+      <div style="margin-top:8px;">${escapeHtml(grade.work || "—")} — <b>${grade.value}</b></div>
+      <div class="muted small" style="margin-top:8px;">Дію не можна скасувати.</div>
+    `,
+    actions: [
+      { text:"Скасувати", className:"btn btn-ghost", onClick: modalClose },
+      { text:"Видалити", className:"btn btn-ghost", onClick: () => {
+        db.grades.splice(idx, 1);
+        student.coins = Math.max(0, Number(student.coins || 0) - coinsByGrade(Number(grade.value || 0)));
+        student.points = Math.max(0, Number(student.points || 0) - Number(grade.value || 0) * 5);
+        teacher.coinsGivenTotal = Math.max(0, Number(teacher.coinsGivenTotal || 0) - Math.max(0, coinsByGrade(Number(grade.value || 0))));
+
+        teacherRecalcGradeBadges(db, student.id);
+        dbSave(db);
+        modalClose();
+        $("#tGradesMsg").textContent = `Оцінку видалено 🗑️ ${student.name}: ${grade.value}`;
+        teacherRenderTeacherGradesList(teacherId);
+      }}
+    ]
+  });
+}
+
 function teacherRenderTeacherGradesList(teacherId) {
   const db = dbLoad();
   const teacher = getTeacher(teacherId);
   const host = $("#tGradesList");
 
   const last = db.grades
-    .filter(g => g.teacherName === teacher.name)
-    .slice(-10)
-    .reverse();
+    .filter(g => g.teacherId === teacher.id || g.teacherName === teacher.name)
+    .slice()
+    .sort((a,b) => (b.createdAt||0) - (a.createdAt||0))
+    .slice(0, 10);
 
   if (!last.length) { host.innerHTML = `<p class="muted">Поки немає оцінок.</p>`; return; }
 
   host.innerHTML = `
     <table class="table">
-      <thead><tr><th>Учень</th><th>Предмет</th><th>Оцінка</th><th>Робота</th><th>Дата</th></tr></thead>
+      <thead><tr><th>Учень</th><th>Предмет</th><th>Оцінка</th><th>Робота</th><th>Дата</th><th>Дії</th></tr></thead>
       <tbody>
         ${last.map(g => {
           const st = db.users.find(u => u.id === g.studentId);
@@ -287,12 +403,25 @@ function teacherRenderTeacherGradesList(teacherId) {
             <td>${g.subject}</td>
             <td><b>${g.value}</b></td>
             <td>${g.work}</td>
-            <td>${fmtDate(g.createdAt)}</td>
+            <td>${fmtDate(g.updatedAt || g.createdAt)}</td>
+            <td>
+              <div class="row gap wrap" style="margin:0;">
+                <button class="btn btn-ghost" type="button" data-grade-edit="${g.id}">✏️</button>
+                <button class="btn btn-ghost" type="button" data-grade-delete="${g.id}">🗑️</button>
+              </div>
+            </td>
           </tr>`;
         }).join("")}
       </tbody>
     </table>
   `;
+
+  host.querySelectorAll("[data-grade-edit]").forEach(btn => {
+    btn.onclick = () => teacherEditGrade(teacherId, btn.dataset.gradeEdit);
+  });
+  host.querySelectorAll("[data-grade-delete]").forEach(btn => {
+    btn.onclick = () => teacherDeleteGrade(teacherId, btn.dataset.gradeDelete);
+  });
 }
 
 /* ===== Teacher schedule ===== */
